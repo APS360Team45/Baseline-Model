@@ -1,5 +1,8 @@
 import cv2
+import sys
 import numpy as np
+
+RIPENESS_LABELS = ["Unripe", "Semi-Ripe", "Ripe", "Overripe"]
 
 def average_image_color(img_path):
     img = cv2.imread(img_path)
@@ -34,16 +37,33 @@ def average_image_color(img_path):
         V_avg = V_sum / pixel_count
         return H_avg, S_avg, V_avg
     
-def evaluate_color_on_spectrum(H,S,V):
+def evaluate_color_on_spectrum(H,S,V, fruit_name):
     ''' 
     Evalutes the given color on the spectrum of colors for the associated fruit
     to determine ripeness
     '''
     if H<20 and S>50 and V>50:      # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 1
+        return 0
     elif H<20 and S>50 and V<50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 2
+        return 1
     elif H<20 and S<50 and V>50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 3
+        return 2
     elif H<20 and S<50 and V<50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 4
+        return 3
+    
+def evaluate_ripeness(img_path, fruit_name):
+    H, S, V = average_image_color(img_path)
+    ripeness = evaluate_color_on_spectrum(H,S,V, fruit_name)
+    return RIPENESS_LABELS[ripeness]
+
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python ColorBasedClassifier.py <image_path> <fruit_name>")
+        sys.exit()
+    else:
+        img_path = sys.argv[1]
+        fruit_name = sys.argv[2]
+        ripeness = evaluate_ripeness(img_path, fruit_name)
+        print(ripeness)
