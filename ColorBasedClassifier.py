@@ -3,6 +3,11 @@ import sys
 import numpy as np
 
 RIPENESS_LABELS = ["Unripe", "Semi-Ripe", "Ripe", "Overripe"]
+CLASSIFIER_HSV_CONSTANTS = [
+    {"fruit": "mango", "Unripe": [0, 0, 0], "Semi-Ripe": [0,0,0], "Ripe": [0, 0, 0], "Overripe": [0, 0, 0]},
+    {"fruit": "banana", "Unripe": [0, 0, 0], "Semi-Ripe": [0,0,0], "Ripe": [0, 0, 0], "Overripe": [0, 0, 0]},
+    {"fruit": "tomato", "Unripe": [0, 0, 0], "Semi-Ripe": [0,0,0], "Ripe": [0, 0, 0], "Overripe": [0, 0, 0]},
+]
 
 def average_image_color(img_path):
     img = cv2.imread(img_path)
