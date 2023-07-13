@@ -4,9 +4,23 @@ import numpy as np
 
 RIPENESS_LABELS = ["Unripe", "Semi-Ripe", "Ripe", "Overripe"]
 CLASSIFIER_HSV_CONSTANTS = [
-    {"fruit": "mango", "Unripe": [0, 0, 0], "Semi-Ripe": [0,0,0], "Ripe": [0, 0, 0], "Overripe": [0, 0, 0]},
-    {"fruit": "banana", "Unripe": [0, 0, 0], "Semi-Ripe": [0,0,0], "Ripe": [0, 0, 0], "Overripe": [0, 0, 0]},
-    {"fruit": "tomato", "Unripe": [0, 0, 0], "Semi-Ripe": [0,0,0], "Ripe": [0, 0, 0], "Overripe": [0, 0, 0]},
+    {"fruit": "mango", 
+     "Unripe":    [101, 33, 49], 
+     "Semi-Ripe": [44, 63, 82], 
+     "Ripe":      [40, 62, 91], 
+     "Overripe":  [29, 91, 40]},
+    
+    {"fruit": "banana", 
+     "Unripe":    [87, 58, 70], 
+     "Semi-Ripe": [57, 56, 60], 
+     "Ripe":      [46, 78, 97], 
+     "Overripe":  [9, 46, 35]},
+    
+    {"fruit": "tomato", 
+     "Unripe":    [68, 32, 64], 
+     "Semi-Ripe": [25, 96, 76], 
+     "Ripe":      [12, 94, 82], 
+     "Overripe":  [6, 90, 52]}
 ]
 
 def average_image_color(img_path):
@@ -47,6 +61,8 @@ def evaluate_color_on_spectrum(H,S,V, fruit_name):
     Evalutes the given color on the spectrum of colors for the associated fruit
     to determine ripeness
     '''
+    
+    """ 
     if H<20 and S>50 and V>50:      # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
         return 0
     elif H<20 and S>50 and V<50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
@@ -55,13 +71,26 @@ def evaluate_color_on_spectrum(H,S,V, fruit_name):
         return 2
     elif H<20 and S<50 and V<50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
         return 3
+    """
     
+    distances = []
+    given_color = np.array([H, S, V])
+    
+    for fruit in CLASSIFIER_HSV_CONSTANTS:
+        for ripeness in RIPENESS_LABELS:
+            curr_color = np.array(fruit[ripeness])
+            # rgb_color = np.array(colorsys.hsv_to_rgb(hsv_color[0]/360, hsv_color[1]/100, hsv_color[2]/100)) * 255
+            distance = np.sqrt(np.sum((curr_color - given_color)**2))
+            distances.append((fruit["fruit"], ripeness, distance))
+    closest_fruit, closest_ripeness, _ = min(distances, key=lambda x: x[2])
+    print(f"closest_fruit: {closest_fruit}")
+    return closest_ripeness
+        
 def evaluate_ripeness(img_path, fruit_name):
     H, S, V = average_image_color(img_path)
     ripeness = evaluate_color_on_spectrum(H,S,V, fruit_name)
-    return RIPENESS_LABELS[ripeness]
-
-
+    return ripeness
+    # return RIPENESS_LABELS[ripeness]
 
 if __name__ == "__main__":
     if len(sys.argv) != 3:
