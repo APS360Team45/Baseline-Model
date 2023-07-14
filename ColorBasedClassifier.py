@@ -26,7 +26,7 @@ CLASSIFIER_RGB_CONSTANTS = [
      "Overripe":  [133, 24, 13]}
 ]
 
-def crop_image(img_path):
+def crop_image(img_path, save_cropped_img=False, log=False):
     img = cv2.imread(img_path)
     grayscaleImage = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     
@@ -36,9 +36,7 @@ def crop_image(img_path):
     # get contours
     contours, hierarchy = cv2.findContours(binaryImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     
-    # deep copy input image for drawing results
-    minRectImage = img.copy()
-    polyRectImage = img.copy()
+    croppedImg = img
     
     # Look for the outer bounding boxes:
     for i, c in enumerate(contours):
@@ -51,6 +49,8 @@ def crop_image(img_path):
             contourArea = cv2.contourArea(c)
             # Set minimum area threshold:
             minArea = 0.025 * img.size
+            if log and contourArea > 100: print(f"minArea: {minArea}")
+            if log and contourArea > 100: print(f"contourArea: {contourArea}")
 
             # Look for the largest contour:
             if contourArea > minArea:
@@ -68,20 +68,31 @@ def crop_image(img_path):
 
                 # Draw the rectangle:
                 croppedImg = img[rectangleY:rectangleHeight, rectangleX:rectangleWidth]
-                cv2.imwrite("polyRectImage.png", croppedImg)
+                if save_cropped_img: cv2.imwrite("croppedImg.png", croppedImg)
+            
+    return croppedImg
     
-def average_image_color(img_path):
-    img = cv2.imread(img_path)
+def average_image_color(img_path=None, read_from_path=False, img=None, log=False):
+    if read_from_path: img = cv2.imread(img_path)
     
-    average_color_row = np.average(img, axis=0)
-    average_color = np.average(average_color_row, axis=0)
-        
-    rounded_arr = np.round(average_color).astype(int)
-    print(f"RGB: {rounded_arr[0]}, {rounded_arr[1]}, {rounded_arr[2]}")
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     
-    return average_color
+    # exclude pixels with low saturation or low value
+    mask = cv2.inRange(hsv, (0, 50, 50), (255, 255, 255))
+    masked_hsv = cv2.bitwise_and(hsv, hsv, mask=mask)
     
-def evaluate_color_on_spectrum(average_color, fruit_name):
+    # compute average color of remaining pixels
+    average_color_hsv = cv2.mean(masked_hsv)
+    average_color = np.array(average_color_hsv[:3], dtype=np.uint8)
+    
+    rgb_color = cv2.cvtColor(np.array([[average_color]]), cv2.COLOR_HSV2RGB)[0][0]
+    rounded_arr = np.round(rgb_color).astype(int)
+    
+    if log: print(f"RGB: {rounded_arr[0]}, {rounded_arr[1]}, {rounded_arr[2]}")        
+    
+    return rgb_color
+    
+def evaluate_color_on_spectrum(average_color, fruit_name, log=False):
     ''' 
     Evalutes the given color on the spectrum of colors for the associated fruit
     to determine ripeness
@@ -90,7 +101,8 @@ def evaluate_color_on_spectrum(average_color, fruit_name):
     closest_color = None
     closest_distance = float('inf')
     
-    print(CLASSIFIER_RGB_CONSTANTS[FRUIT_LABELS[fruit_name]])
+    # if log: print(CLASSIFIER_RGB_CONSTANTS[FRUIT_LABELS[fruit_name]])        
+    if log: print(fruit_name)        
     
     for color_name, rgb_values in itertools.islice(CLASSIFIER_RGB_CONSTANTS[FRUIT_LABELS[fruit_name]].items(), 1, None):
         curr_color = np.array(rgb_values, dtype=np.uint8)
@@ -104,14 +116,15 @@ def evaluate_color_on_spectrum(average_color, fruit_name):
     return closest_color
         
 def evaluate_ripeness(img_path, fruit_name):
-    average_color = average_image_color(img_path)
-    ripeness = evaluate_color_on_spectrum(average_color, fruit_name)
+    img = crop_image(img_path, save_cropped_img=True, log=False)
+    average_color = average_image_color(img=img, log=True)
+    ripeness = evaluate_color_on_spectrum(average_color, fruit_name, log=True)
     return ripeness
 
 if __name__ == "__main__":
     img_path = sys.argv[1]
     fruit_name = sys.argv[2]
-    print(f"img_path: {img_path}")
-    print(f"fruit_name: {fruit_name}")
+    # print(f"img_path: {img_path}")
+    # print(f"fruit_name: {fruit_name}")
     ripeness = evaluate_ripeness(img_path, fruit_name)
     print(ripeness)
