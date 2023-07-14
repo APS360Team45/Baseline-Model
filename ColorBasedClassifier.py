@@ -3,6 +3,7 @@ import sys
 import numpy as np
 import itertools
 import os
+from tqdm import tqdm
 
 FRUIT_LABELS = {"mango": 0, "banana": 1, "tomato": 2}
 RIPENESS_LABELS = ["Unripe", "Semi-Ripe", "Ripe", "Overripe"]
@@ -136,7 +137,9 @@ def get_accuracy(folder_path=os.getcwd(), test=False, test_file_limit=3, log=Fal
                     curr_ripeness = RIPENESS_LABELS[int(sub_dir_name)]
                     if log: print(f"\tACTUAL Ripeness: {sub_dir_name} {curr_ripeness}")
                     sub_dir_path = os.path.join(sub_root, sub_dir_name)
-                    for i, filename in enumerate(os.listdir(sub_dir_path)):
+                    sub_dir_parts = sub_dir_path.split(os.sep)[-2:]
+                    sub_dir_desc = os.path.join(*sub_dir_parts)
+                    for i, filename in tqdm(enumerate(os.listdir(sub_dir_path)), total=len(os.listdir(sub_dir_path)), desc=sub_dir_desc):
                         if test and i >= test_file_limit:
                             break
                         file_path = os.path.join(sub_dir_path, filename)
@@ -151,9 +154,11 @@ def get_accuracy(folder_path=os.getcwd(), test=False, test_file_limit=3, log=Fal
                         total_images += 1
                         if eval_ripeness == curr_ripeness:
                             correct_images += 1
+                        elif RIPENESS_LABELS.index(eval_ripeness) in [RIPENESS_LABELS.index(curr_ripeness) - 1, RIPENESS_LABELS.index(curr_ripeness) + 1]:
+                            correct_images += 0.5
     accuracy = correct_images / total_images * 100
     print(f"Accuracy: {accuracy:.2f}%")
 
 if __name__ == "__main__":
     folder_path = sys.argv[1]
-    get_accuracy(folder_path=folder_path, test=True, test_file_limit=3, log=True, more_details=True)
+    get_accuracy(folder_path=folder_path, test=False, test_file_limit=30, log=False, more_details=False)
