@@ -1,103 +1,71 @@
 import cv2
 import sys
 import numpy as np
+import itertools
 
+FRUIT_LABELS = {"mango": 0, "banana": 1, "tomato": 2}
 RIPENESS_LABELS = ["Unripe", "Semi-Ripe", "Ripe", "Overripe"]
-CLASSIFIER_HSV_CONSTANTS = [
+CLASSIFIER_RGB_CONSTANTS = [
     {"fruit": "mango", 
-     "Unripe":    [101, 33, 49], 
-     "Semi-Ripe": [44, 63, 82], 
-     "Ripe":      [40, 62, 91], 
-     "Overripe":  [29, 91, 40]},
+     "Unripe":    [96, 124, 83], 
+     "Semi-Ripe": [210, 174, 77], 
+     "Ripe":      [232, 183, 88], 
+     "Overripe":  [102, 54, 9]},
     
     {"fruit": "banana", 
-     "Unripe":    [87, 58, 70], 
-     "Semi-Ripe": [57, 56, 60], 
-     "Ripe":      [46, 78, 97], 
-     "Overripe":  [9, 46, 35]},
+     "Unripe":    [131, 178, 74], 
+     "Semi-Ripe": [153, 149, 68], 
+     "Ripe":      [248, 204, 55], 
+     "Overripe":  [89, 54, 48]},
     
     {"fruit": "tomato", 
-     "Unripe":    [68, 32, 64], 
-     "Semi-Ripe": [25, 96, 76], 
-     "Ripe":      [12, 94, 82], 
-     "Overripe":  [6, 90, 52]}
+     "Unripe":    [157, 164, 112], 
+     "Semi-Ripe": [193, 84, 7], 
+     "Ripe":      [209, 53, 12], 
+     "Overripe":  [133, 24, 13]}
 ]
 
 def average_image_color(img_path):
     img = cv2.imread(img_path)
-    hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
-
-    # Hue, Saturation, Value
-    H_sum = 0
-    S_sum = 0
-    V_sum = 0
-    H_avg = 0
-    S_avg = 0
-    V_avg = 0
-    pixel_count = 0
-
-    height, width, channels = hsv_img.shape
-
-    for y in range(height):
-        for x in range(width):
-            H, S, V = hsv_img[y, x]
-
-            if H!=0 or S!=0 or V!=0:
-                H_sum += H
-                S_sum += S
-                V_sum += V
-                pixel_count += 1
-
-    if pixel_count == 0:
-        return 0, 0, 0
-    else:
-        H_avg = H_sum / pixel_count
-        S_avg = S_sum / pixel_count
-        V_avg = V_sum / pixel_count
-        return H_avg, S_avg, V_avg
+    average_color_row = np.average(img, axis=0)
+    average_color = np.average(average_color_row, axis=0)
+        
+    rounded_arr = np.round(average_color).astype(int)
+    print(f"RGB: {rounded_arr[0]}, {rounded_arr[1]}, {rounded_arr[2]}")
     
-def evaluate_color_on_spectrum(H,S,V, fruit_name):
+    return average_color
+    
+def evaluate_color_on_spectrum(average_color, fruit_name):
     ''' 
     Evalutes the given color on the spectrum of colors for the associated fruit
     to determine ripeness
     '''
     
-    """ 
-    if H<20 and S>50 and V>50:      # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 0
-    elif H<20 and S>50 and V<50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 1
-    elif H<20 and S<50 and V>50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 2
-    elif H<20 and S<50 and V<50:    # ARBITRARY VALUES MUST BE UPDATED TO REFLECT ACTUAL VALUES
-        return 3
-    """
+    closest_color = None
+    closest_distance = float('inf')
     
-    distances = []
-    given_color = np.array([H, S, V])
+    print(CLASSIFIER_RGB_CONSTANTS[FRUIT_LABELS[fruit_name]])
     
-    for fruit in CLASSIFIER_HSV_CONSTANTS:
-        for ripeness in RIPENESS_LABELS:
-            curr_color = np.array(fruit[ripeness])
-            # rgb_color = np.array(colorsys.hsv_to_rgb(hsv_color[0]/360, hsv_color[1]/100, hsv_color[2]/100)) * 255
-            distance = np.sqrt(np.sum((curr_color - given_color)**2))
-            distances.append((fruit["fruit"], ripeness, distance))
-    closest_fruit, closest_ripeness, _ = min(distances, key=lambda x: x[2])
-    print(f"closest_fruit: {closest_fruit}")
-    return closest_ripeness
+    for color_name, rgb_values in itertools.islice(CLASSIFIER_RGB_CONSTANTS[FRUIT_LABELS[fruit_name]].items(), 1, None):
+        curr_color = np.array(rgb_values, dtype=np.uint8)
+        
+        distance = np.linalg.norm(average_color - curr_color)
+        
+        if distance < closest_distance:
+            closest_color = color_name
+            closest_distance = distance
+    
+    return closest_color
         
 def evaluate_ripeness(img_path, fruit_name):
-    H, S, V = average_image_color(img_path)
-    ripeness = evaluate_color_on_spectrum(H,S,V, fruit_name)
+    average_color = average_image_color(img_path)
+    ripeness = evaluate_color_on_spectrum(average_color, fruit_name)
     return ripeness
-    # return RIPENESS_LABELS[ripeness]
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: python ColorBasedClassifier.py <image_path> <fruit_name>")
-        sys.exit()
-    else:
-        img_path = sys.argv[1]
-        fruit_name = sys.argv[2]
-        ripeness = evaluate_ripeness(img_path, fruit_name)
-        print(ripeness)
+    img_path = sys.argv[1]
+    fruit_name = sys.argv[2]
+    print(f"img_path: {img_path}")
+    print(f"fruit_name: {fruit_name}")
+    ripeness = evaluate_ripeness(img_path, fruit_name)
+    print(ripeness)
