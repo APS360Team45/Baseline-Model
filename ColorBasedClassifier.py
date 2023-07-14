@@ -2,6 +2,7 @@ import cv2
 import sys
 import numpy as np
 import itertools
+import os
 
 FRUIT_LABELS = {"mango": 0, "banana": 1, "tomato": 2}
 RIPENESS_LABELS = ["Unripe", "Semi-Ripe", "Ripe", "Overripe"]
@@ -25,8 +26,53 @@ CLASSIFIER_RGB_CONSTANTS = [
      "Overripe":  [133, 24, 13]}
 ]
 
+def crop_image(img_path):
+    img = cv2.imread(img_path)
+    grayscaleImage = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # get binary mask
+    threshValue, binaryImage = cv2.threshold(grayscaleImage, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+    
+    # get contours
+    contours, hierarchy = cv2.findContours(binaryImage, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # deep copy input image for drawing results
+    minRectImage = img.copy()
+    polyRectImage = img.copy()
+    
+    # Look for the outer bounding boxes:
+    for i, c in enumerate(contours):
+
+        # restrict search to only parent contours
+        # (ignores inner contours; e.g. holes)
+        if hierarchy[0][i][3] == -1:
+
+            # Get contour area:
+            contourArea = cv2.contourArea(c)
+            # Set minimum area threshold:
+            minArea = 0.025 * img.size
+
+            # Look for the largest contour:
+            if contourArea > minArea:
+                
+                # Approximate the contour to a polygon:
+                contoursPoly = cv2.approxPolyDP(c, 3, True)
+                # Convert the polygon to a bounding rectangle:
+                boundRect = cv2.boundingRect(contoursPoly)
+
+                # Set the rectangle dimensions:
+                rectangleX = boundRect[0]
+                rectangleY = boundRect[1]
+                rectangleWidth = boundRect[0] + boundRect[2]
+                rectangleHeight = boundRect[1] + boundRect[3]
+
+                # Draw the rectangle:
+                croppedImg = img[rectangleY:rectangleHeight, rectangleX:rectangleWidth]
+                cv2.imwrite("polyRectImage.png", croppedImg)
+    
 def average_image_color(img_path):
     img = cv2.imread(img_path)
+    
     average_color_row = np.average(img, axis=0)
     average_color = np.average(average_color_row, axis=0)
         
