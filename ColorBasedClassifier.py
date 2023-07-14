@@ -115,11 +115,47 @@ def evaluate_color_on_spectrum(average_color, fruit_name, log=False):
     
     return closest_color
         
-def evaluate_ripeness(img_path, fruit_name):
+def evaluate_ripeness(img_path, fruit_name, log=False):
     img = crop_image(img_path, save_cropped_img=True, log=False)
-    average_color = average_image_color(img=img, log=True)
-    ripeness = evaluate_color_on_spectrum(average_color, fruit_name, log=True)
+    average_color = average_image_color(img=img, log=log)
+    ripeness = evaluate_color_on_spectrum(average_color, fruit_name, log=log)
     return ripeness
+
+def get_accuracy(folder_path, log=False):
+    # for filename in os.listdir(folder_path):
+    #     if filename.endswith(".jpg"):
+    #         img_path = os.path.join(folder_path, filename)
+    #         ripeness = evaluate_ripeness(img_path, fruit_name)
+    #         print(f"{filename} - {ripeness}")
+    #         continue
+    #     else:
+    #         continue
+        
+    for root, dirs, files in os.walk(folder_path, topdown=True):
+        for dir_name in dirs:
+            if dir_name == "0":
+                break
+            fruit_name = dir_name.lower()
+            print(f"Directory name: {fruit_name}")
+            dir_path = os.path.join(root, dir_name)
+            for sub_root, sub_dirs, sub_files in os.walk(dir_path):
+                for sub_dir_name in sub_dirs:
+                    print(f"\tSubdirectory name: {sub_dir_name}")
+                    print(f"\tFRUIT-RIPENESS: {RIPENESS_LABELS[int(sub_dir_name)]}")
+                    sub_dir_path = os.path.join(sub_root, sub_dir_name)
+                    for i, filename in enumerate(os.listdir(sub_dir_path)):
+                        if i >= 2:
+                            break
+                        file_path = os.path.join(sub_dir_path, filename)
+                        file_ext = os.path.splitext(file_path)[1].lower()
+                        if file_ext in [".gif", ".jfif", ".ini"]:
+                            print(f"\t\tSkipping file: {file_path}")
+                            continue
+                        print(f"\t\tFile path: {file_path}")
+                        # Process the image here
+                        ripeness = evaluate_ripeness(file_path, fruit_name.lower())
+                        print(f"\t\tCALCULATED Ripeness: {ripeness}")
+    
 
 if __name__ == "__main__":
     img_path = sys.argv[1]
